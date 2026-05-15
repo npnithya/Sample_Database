@@ -1114,7 +1114,23 @@ class SampleTreeGUI:
                 namtext = f" ({nam})"
             else:
                 namtext = ""
-            text += mattext + namtext
+            # If material indicates a calibration chip, show raw sputter values (no added units)
+            caltext = ""
+            try:
+                props = getattr(obj, "properties", {})
+                if isinstance(props, dict) and mat and "calibration" in str(mat).lower():
+                    sc = props.get("sputter_current")
+                    sf = props.get("sputter_flow")
+                    parts = []
+                    if sc not in (None, ""):
+                        parts.append(str(sc))
+                    if sf not in (None, ""):
+                        parts.append(str(sf))
+                    if parts:
+                        caltext = f" ({', '.join(parts)})"
+            except Exception:
+                caltext = ""
+            text += mattext + caltext + namtext
             # Special cases for certain classes to append extra info
             try:
                 if obj.__class__.__name__ == "Annealing":
@@ -1129,6 +1145,12 @@ class SampleTreeGUI:
                         test_type = props.get("test_type")
                         if test_type not in (None, ""):
                             text += f" ({test_type})"
+                if obj.__class__.__name__ == "XRay_analysis":
+                    props = getattr(obj, "properties", {})
+                    if isinstance(props, dict):
+                        mode = props.get("mode")
+                        if mode not in (None, ""):
+                            text += f" ({mode})"
             except Exception:
                 pass
         return text
