@@ -297,6 +297,7 @@ class SampleTreeGUI:
 
         ttk.Button(action_frame, text="Edit Node", command=self.edit_node).grid(row=3, column=0, padx=2, pady=6, sticky="w")
         ttk.Button(action_frame, text="Copy Node", command=self.copy_node).grid(row=3, column=1, padx=2, pady=6, sticky="w")
+        ttk.Button(action_frame, text="Create Node", command=self.add_child_node).grid(row=3, column=2, padx=2, pady=6, sticky="w")
 
         self.status_var = tk.StringVar()
         ttk.Label(main, textvariable=self.status_var, relief="sunken", anchor="w").pack(fill="x")
