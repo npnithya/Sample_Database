@@ -199,7 +199,8 @@
         "custom": [
             "note",
             "imaging_date",
-            "imaging_mode"
+            "imaging_mode",
+            "folder"
         ],
         "permitted_children": []
     },

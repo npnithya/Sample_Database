@@ -523,12 +523,14 @@ class SampleTreeGUI:
         self.properties_panel_tree.column("value", width=180, anchor="w")
         try:
             self.properties_panel_tree.tag_configure("section_header", font=("TkDefaultFont", 9, "bold"))
+            self.properties_panel_tree.tag_configure("filepath", foreground="#0066cc", font=("TkDefaultFont", 9, "underline"))
         except Exception:
             pass
         properties_sb = ttk.Scrollbar(properties_frame, orient="vertical", command=self.properties_panel_tree.yview)
         self.properties_panel_tree.configure(yscrollcommand=properties_sb.set)
         properties_sb.pack(side="right", fill="y")
         self.properties_panel_tree.pack(fill="both", expand=True)
+        self.properties_panel_tree.bind("<Double-1>", self.on_property_double_click)
         
         paned_main.add(self.properties_panel, weight=2)
 
@@ -664,9 +666,32 @@ class SampleTreeGUI:
                         display_v = "" if v is None else (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))
                     except Exception:
                         display_v = str(v)
-                    self.properties_panel_tree.insert("", "end", values=(k, display_v))
+                    
+                    tags = ()
+                    if display_v and isinstance(display_v, str) and os.path.exists(display_v):
+                        tags = ("filepath",)
+                    self.properties_panel_tree.insert("", "end", values=(k, display_v), tags=tags)
         except Exception as e:
             self.properties_panel_tree.insert("", "end", values=("Error", str(e)))
+
+    def on_property_double_click(self, event):
+        """Handle double-click on properties to open file/folder paths"""
+        item_id = self.properties_panel_tree.focus()
+        if not item_id:
+            return
+        
+        values = self.properties_panel_tree.item(item_id, "values")
+        if len(values) < 2:
+            return
+        
+        prop_value = values[1].strip()
+        if prop_value and os.path.exists(prop_value):
+            try:
+                # Open directory in Explorer, file in default viewer natively on Windows
+                os.startfile(prop_value)
+                self.refresh_status(f"Opened path: {prop_value}")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to open path: {e}", parent=self.root)
 
     def copy_node(self):
         """Copy the currently selected node to a new destination"""
