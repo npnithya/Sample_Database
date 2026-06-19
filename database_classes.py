@@ -10,6 +10,12 @@ import tkinter as tk
 from tkinter import ttk, simpledialog, messagebox, filedialog
 import shutil
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATABASE_KEYS_FILE = os.path.join(BASE_DIR, "database_keys.txt")
+REQUIRED_PROPERTIES_FILE = os.path.join(BASE_DIR, "required_properties.txt")
+
+DATABASE_STRUCTURE_FILE = os.path.join(BASE_DIR, "database_structure.json")
+
 
 class Sample:
     def __init__(self, required_properties=[], **kwargs):
@@ -21,7 +27,7 @@ class Sample:
                 raise ValueError(f"Missing required property for {self.__class__.__name__}: {prop}")
             
         # # Check if any kwargs look like typos of existing properties
-        # with open('database_keys.txt', 'a+') as f:
+        # with open(DATABASE_KEYS_FILE, 'a+') as f:
         #     f.seek(0)
         #     existing_keys = f.read().splitlines()
         #     type_prefix = self.type + '_'
@@ -46,19 +52,17 @@ class Sample:
         # self.log_keys()
 
         # Check if any kwargs look like typos of existing properties
-        with open('database_keys.txt', 'a+') as f:
-            f.seek(0)
-            existing_keys = f.read().splitlines()
-            type_prefix = self.__class__.__name__ + '_'
-            type_keys = [key[len(type_prefix):] for key in existing_keys if key.startswith(type_prefix)]
+        try:
+            with open(DATABASE_STRUCTURE_FILE, 'r', encoding='utf-8') as f:
+                schema = json.load(f)
+            cls_schema = schema.get(self.__class__.__name__, {"required": [], "custom": []})
+            type_keys = cls_schema["custom"] + cls_schema["required"]
             for kwarg_key in kwargs.keys():
-                # don't warn for the optional universal 'date' property
-                if kwarg_key == 'date':
-                    continue
-                # Check for possible typos: if the key is similar to an existing key for this type
-                # For simplicity, warn if the key is not in type_keys and not in required_properties
+                if kwarg_key == 'date': continue
                 if kwarg_key not in type_keys and kwarg_key not in self.required_properties:
                     print(f"Warning: '{kwarg_key}' is not a known property for {self.__class__.__name__}. Check for typos or add it intentionally.")
+        except Exception:
+            pass
 
         # Check if any of the kwargs are auto-generated properties and delete them if so
         auto_props = ['id', 'entry_created_date']
@@ -97,15 +101,22 @@ class Sample:
 
     def log_keys(self):
         """Add the keys to a global list"""
-        # Open the keys file and check if the key already exists
-        with open('database_keys.txt', 'a+') as f:
-            f.seek(0)
-            existing_keys = f.read().splitlines()
+        try:
+            with open(DATABASE_STRUCTURE_FILE, 'r', encoding='utf-8') as f:
+                schema = json.load(f)
+            cls_name = self.__class__.__name__
+            if cls_name not in schema:
+                schema[cls_name] = {"required": [], "custom": []}
+            changed = False
             for key in self.properties.keys():
-                glob_key = self.__class__.__name__ + '_' + key      # Add the type prefix to the key (how they are stored in the file)
-                if glob_key not in existing_keys:
-                    f.write(glob_key + '\n')
-                    print(f"Added new key: {key} to database_keys.txt")
+                if key not in schema[cls_name]["custom"] and key not in schema[cls_name]["required"] and key != 'date':
+                    schema[cls_name]["custom"].append(key)
+                    changed = True
+            if changed:
+                with open(DATABASE_STRUCTURE_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(schema, f, indent=4)
+        except Exception:
+            pass
 
     def __setattr__(self, name, value):
         if name == 'id':
@@ -195,14 +206,16 @@ class Processing_Step(Sample):
             if prop not in kwargs:
                 raise ValueError(f"Missing required property for {self.__class__.__name__}: {prop}")
 
-        with open('database_keys.txt', 'a+') as f:
-            f.seek(0)
-            existing_keys = f.read().splitlines()
-            type_prefix = self.__class__.__name__ + '_'
-            type_keys = [key[len(type_prefix):] for key in existing_keys if key.startswith(type_prefix)]
+        try:
+            with open(DATABASE_STRUCTURE_FILE, 'r', encoding='utf-8') as f:
+                schema = json.load(f)
+            cls_schema = schema.get(self.__class__.__name__, {"required": [], "custom": []})
+            type_keys = cls_schema["custom"] + cls_schema["required"]
             for kwarg_key in kwargs.keys():
                 if kwarg_key not in type_keys and kwarg_key not in self.required_properties:
                     print(f"Warning: '{kwarg_key}' is not a known property for {self.__class__.__name__}. Check for typos or add it intentionally.")
+        except Exception:
+            pass
 
         auto_props = ['id', 'entry_created_date']
         for prop in auto_props:
@@ -231,15 +244,22 @@ class Processing_Step(Sample):
 
     def log_keys(self):
         """Add the keys to a global list"""
-        # Open the keys file and check if the key already exists
-        with open('database_keys.txt', 'a+') as f:
-            f.seek(0)
-            existing_keys = f.read().splitlines()
+        try:
+            with open(DATABASE_STRUCTURE_FILE, 'r', encoding='utf-8') as f:
+                schema = json.load(f)
+            cls_name = self.__class__.__name__
+            if cls_name not in schema:
+                schema[cls_name] = {"required": [], "custom": []}
+            changed = False
             for key in self.properties.keys():
-                glob_key = self.__class__.__name__ + '_' + key
-                if glob_key not in existing_keys:
-                    f.write(glob_key + '\n')
-                    print(f"Added new key: {key} to database_keys.txt")
+                if key not in schema[cls_name]["custom"] and key not in schema[cls_name]["required"] and key != 'date':
+                    schema[cls_name]["custom"].append(key)
+                    changed = True
+            if changed:
+                with open(DATABASE_STRUCTURE_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(schema, f, indent=4)
+        except Exception:
+            pass
 
     def __setattr__(self, name, value):
         if name == 'id':
@@ -257,161 +277,255 @@ class Processing_Step(Sample):
         return f"{self.__class__.__name__}(id={self.id}, created_date={self.entry_created_date}, properties={self.properties})"
 
 
+DEFAULT_SCHEMA = {
+    "Sample": {
+        "base": None,
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Processing_Step": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Wafer": {
+        "base": "Sample",
+        "required": [
+            "material"
+        ],
+        "custom": [],
+        "permitted_children": [
+            "Chip",
+            "SEM_stub",
+            "Annealing",
+            "XRay_analysis",
+            "Electrical_measurement",
+            "Micromechanical_testing",
+            "Swissmapper"
+        ]
+    },
+    "Chip": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": [
+            "SEM_stub",
+            "Annealing",
+            "Chip",
+            "Imaging",
+            "XRay_analysis",
+            "Electrical_measurement",
+            "Micromechanical_testing",
+            "Swissmapper"
+        ]
+    },
+    "SEM_stub": {
+        "base": "Sample",
+        "required": [
+            "stub_diameter"
+        ],
+        "custom": [],
+        "permitted_children": [
+            "Pillar_array",
+            "Tensile_bar",
+            "TEM_lamella",
+            "Imaging",
+            "XRay_analysis",
+            "Micromechanical_testing",
+            "Swissmapper",
+            "Liftout",
+            "EBSD",
+            "FIB_milling"
+        ]
+    },
+    "TEM_lamella": {
+        "base": "Sample",
+        "required": [
+            "grid_material"
+        ],
+        "custom": [],
+        "permitted_children": [
+            "Liftout",
+            "Imaging",
+            "TKD",
+            "APT_tip",
+            "EBSD",
+            "Micromechanical_testing",
+            "FIB_milling"
+        ]
+    },
+    "Pillar_array": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": [
+            "TEM_lamella",
+            "FIB_milling",
+            "Pillar_compression",
+            "Imaging",
+            "EBSD",
+            "Micromechanical_testing",
+            "Liftout"
+        ]
+    },
+    "Tensile_bar": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": [
+            "TEM_lamella",
+            "FIB_milling",
+            "Imaging",
+            "TKD",
+            "EBSD",
+            "Micromechanical_testing",
+            "Liftout"
+        ]
+    },
+    "APT_tip": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": [
+            "FIB_milling",
+            "Imaging"
+        ]
+    },
+    "Annealing": {
+        "base": "Processing_Step",
+        "required": [
+            "temperature_C",
+            "duration"
+        ],
+        "custom": [],
+        "permitted_children": [
+            "Chip",
+            "SEM_stub"
+        ]
+    },
+    "FIB_milling": {
+        "base": "Processing_Step",
+        "required": [
+            "ion_species",
+            "microscope"
+        ],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Liftout": {
+        "base": "Processing_Step",
+        "required": [
+            "microscope",
+            "ion_species"
+        ],
+        "custom": [],
+        "permitted_children": [
+            "TEM_lamella",
+            "APT_tip"
+        ]
+    },
+    "Imaging": {
+        "base": "Processing_Step",
+        "required": [
+            "microscope"
+        ],
+        "custom": [],
+        "permitted_children": []
+    },
+    "XRay_analysis": {
+        "base": "Processing_Step",
+        "required": [
+            "mode"
+        ],
+        "custom": [],
+        "permitted_children": []
+    },
+    "TKD": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "EBSD": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Micromechanical_testing": {
+        "base": "Processing_Step",
+        "required": [
+            "test_type"
+        ],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Electrical_measurement": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Swissmapper": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    }
+}
 
-class Annealing(Processing_Step):
-    # Annealing step
-    def __init__(self, **kwargs):
-        required_properties = ['temperature_C', 'duration',]
-        super().__init__(required_properties, **kwargs)
-        self.permitted_children = ['Chip', 'SEM_stub']
+RESTORED_DEFAULT_SCHEMA = False
 
-
-class FIB_milling(Processing_Step):
-    # Pillar milling step
-    def __init__(self, **kwargs):
-        required_properties = ['ion_species', 'microscope']
-        super().__init__(required_properties, **kwargs)
-
-
-class Liftout(Processing_Step):
-    # Liftout step
-    def __init__(self, **kwargs):
-        required_properties = ['microscope', 'ion_species',]
-        super().__init__(required_properties, **kwargs)
-        self.permitted_children = ['TEM_lamella', 'APT_tip']
-
-
-class Imaging(Processing_Step):
-    def __init__(self, **kwargs):
-        required_properties = ['microscope']
-        super().__init__(required_properties, **kwargs)
-
-
-class XRay_analysis(Processing_Step):
-    def __init__(self, **kwargs):
-        required_properties = ['mode',]
-        super().__init__(required_properties, **kwargs)
-
-
-class TKD(Processing_Step):
-    def __init__(self, **kwargs):
-        required_properties = []
-        super().__init__(required_properties, **kwargs)
-
-
-class EBSD(Processing_Step):
-    def __init__(self, **kwargs):
-        required_properties = []
-        super().__init__(required_properties, **kwargs)
-
-
-class Micromechanical_testing(Processing_Step):
-    def __init__(self, **kwargs):
-        required_properties = ['test_type',]
-        super().__init__(required_properties, **kwargs)
-
-
-class Electrical_measurement(Processing_Step):
-    def __init__(self, **kwargs):
-        required_properties = []
-        super().__init__(required_properties, **kwargs)
-
-
-class Swissmapper(Processing_Step):
-    def __init__(self, **kwargs):
-        required_properties = []
-        super().__init__(required_properties, **kwargs)
-
-
-
-def discover_required_properties(output_file='required_properties.txt'):
-    """
-    Discover required_properties lists for classes defined in this module
-    by temporarily intercepting Sample.__init__ and Processing_Step.__init__.
-    Writes a text file with one line per class: "ClassName: prop1, prop2..."
-    Returns a dict mapping class name -> list of required properties.
-    """
-
-    module = sys.modules[__name__]
-    captured = {}
-
-    # Keep originals to restore later
-    orig_sample_init = Sample.__init__
-    orig_proc_init = Processing_Step.__init__
-
-    def _sample_wrapper(self, required_properties=[], **kwargs):
-        # Record required properties passed to Sample.__init__
-        captured[self.__class__.__name__] = list(required_properties)
-        # Do not call original to avoid side-effects during discovery
-        return None
-
-    def _proc_wrapper(self, required_properties=[], **kwargs):
-        captured[self.__class__.__name__] = list(required_properties)
-        return None
-
+def _generate_dynamic_classes():
+    global RESTORED_DEFAULT_SCHEMA
+    if not os.path.exists(DATABASE_STRUCTURE_FILE):
+        import json
+        with open(DATABASE_STRUCTURE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(DEFAULT_SCHEMA, f, indent=4)
+        RESTORED_DEFAULT_SCHEMA = True
+    import json
     try:
-        # Monkey-patch constructors
-        Sample.__init__ = _sample_wrapper
-        Processing_Step.__init__ = _proc_wrapper
-
-        # Find classes defined in this module
-        classes = [obj for _, obj in inspect.getmembers(module, inspect.isclass)
-                    if obj.__module__ == module.__name__]
-
-        # Instantiate each class (without kwargs). The patched ctors will capture required_properties.
-        for cls in classes:
-            try:
-                cls()
-            except Exception:
-                # Ignore instantiation errors; we only need the captured data from our wrappers
-                pass
-    finally:
-        # Restore originals
-        Sample.__init__ = orig_sample_init
-        Processing_Step.__init__ = orig_proc_init
-
-    # Ensure every class has an entry (empty list if none captured)
-    result = {}
-    for cls in classes:
-        name = cls.__name__
-        result[name] = captured.get(name, [])
-
-    # Check if output file exists
-    if os.path.exists(output_file):
-        # Read old file contents
-        with open(output_file, 'r') as f:
-            old_lines = f.readlines()
-        old_props = {}
-        for line in old_lines:
-            if ':' in line:
-                name, props = line.strip().split(':', 1)
-                old_props[name.strip()] = set(p.strip() for p in props.split(',') if p.strip())
-
-        # Compare with new result
-        missing = []
-        for name in old_props:
-            if name in result:
-                if not old_props[name].issubset(set(result[name])):
-                    missing.append(name)
+        with open(DATABASE_STRUCTURE_FILE, 'r', encoding='utf-8') as f:
+            schema = json.load(f)
+            
+        for name, config in schema.items():
+            if name in ['Sample', 'Processing_Step']:
+                continue
+                
+            base_name = config.get("base")
+            if base_name == "Processing_Step":
+                base_class = Processing_Step
             else:
-                missing.append(name)
+                base_class = Sample
+                
+            req_props = config.get("required", [])
+            perm_children = config.get("permitted_children", [])
+            
+            def make_init(rp, pc):
+                def __init__(self, **kwargs):
+                    base_class.__init__(self, required_properties=rp, **kwargs)
+                    self.permitted_children = pc
+                    for prop in rp:
+                        if prop in kwargs:
+                            setattr(self, prop, kwargs[prop])
+                return __init__
+                
+            new_class = type(name, (base_class,), {
+                "__init__": make_init(req_props, perm_children)
+            })
+            new_class.__module__ = __name__
+            globals()[name] = new_class
+    except Exception as e:
+        print(f"Failed to generate dynamic classes: {e}")
 
-        if missing:
-            print(f"Warning: The new required_properties list is missing values for: {', '.join(missing)}")
-            choice = input("Overwrite file (o) or rename old file (r)? [o/r]: ").strip().lower()
-            if choice == 'r':
-                timestamp = datetime.datetime.now().strftime('%y%m%d%H%M_')
-                new_name = timestamp + output_file
-                shutil.move(output_file, new_name)
-                print(f"Old file renamed to {new_name}")
-            elif choice != 'o':
-                print("No action taken.")
-                return result
+_generate_dynamic_classes()
 
-    # Write to file
-    with open(output_file, 'w') as f:
-        for name in sorted(result.keys()):
-            props = ', '.join(result[name])
-            f.write(f"{name}: {props}\n")
+def create_class_from_schema(cls_name):
+    # This can be called by GUI when a new class is added to re-run the generator
+    _generate_dynamic_classes()
 
-    return result
+def discover_required_properties():
+    # Deprecated since JSON schema migration
+    pass

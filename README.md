@@ -1,11 +1,12 @@
 # Sample Database Explorer
 
-A Tkinter desktop app for creating and managing hierarchical sample/process trees, with JSON persistence and optional Windows EXE packaging.
+A Tkinter desktop app for creating and managing hierarchical sample/process trees, with fully dynamic JSON-driven class structures, JSON persistence, and optional Windows EXE packaging.
 
 ## What This Project Contains
 
-- Python source code for the GUI and data model
+- Python source code for the GUI and dynamic data model
 - JSON database files (tree data)
+- JSON structure schema (`database_structure.json`) defining all components
 - PyInstaller build config for creating a Windows executable
 - Archived versions of older databases/builds
 
@@ -17,10 +18,9 @@ The program uses relative paths, so keep these files and folders together in the
 Sample_Database/
   database_explorer.py          # main Python entry point
   database_GUI.py               # GUI logic
-  database_classes.py           # class model + validation
+  database_classes.py           # class model + dynamic JSON generation
   database_explorer.spec        # PyInstaller spec
-  required_properties.txt       # required property map per class (recommended)
-  database_keys.txt             # discovered property keys (auto-created if missing)
+  database_structure.json       # MASTER SCHEMA: defines all Sample/Processing classes and permitted children
   databases/                    # active JSON trees
     example_tree.json
     TEST_tree.json
@@ -95,28 +95,31 @@ Distribute the `dist/database_explorer/` folder as-is (keep all files inside it 
 Place and run it from a working folder that contains (or can create) these alongside it:
 
 - `databases/` (auto-created if missing)
-- `database_keys.txt` (auto-created if missing)
-- `required_properties.txt` (recommended; app can run without it, but required-field prompts may be less strict)
+- `database_structure.json` (auto-created if missing, but REQUIRED to configure custom samples/processing steps)
 
 ## How To Use The Program
 
 1. Launch the app (`python database_explorer.py` or EXE).
-2. Create a new tree:
+2. Use the **Advanced -> Import Legacy Keys** dropdown if you are upgrading from an older version that used `.txt` files.
+3. Manage database structure via **Structure Browser**:
+   - Add new properties on the fly.
+   - Use the **Advanced -> Add New Structure** menu to build completely custom `Samples` or `Processing Steps` directly in the GUI!
+4. Create a new tree:
    - click **New Tree**
    - enter a sample system name
    - save JSON in `databases/`
-3. Add nodes:
+5. Add nodes:
    - select a parent node
    - choose a child class from allowed options
    - fill required/optional properties
    - click **Create Node**
-4. Save progress:
+6. Save progress:
    - click **Save Tree** for normal save
-   - click **Save with Timestamp and Close** to version and close
-5. Load existing data:
+   - click **Save with Timestamp and Close** to version and close cleanly
+7. Load existing data:
    - **Load Tree** for one JSON file
    - **Open All Trees** to browse all JSON files in `databases/`
-6. Search and inspect:
+8. Search and inspect:
    - use **Search** to find properties across loaded tree(s)
    - use **View Properties** / **Edit Node** on selected items
 
@@ -148,6 +151,7 @@ A complete public-safe example is included at `databases/example_tree.json`.
 
 ## Notes
 
-- Unknown properties are accepted but logged with warnings.
-- Required properties are class-specific and sourced from `required_properties.txt` in current GUI flows.
+- The class hierarchy (what subclasses what, and what children are permitted) is entirely defined by `database_structure.json`. Python classes are built dynamically at runtime!
+- Unknown properties are accepted but logged with warnings and auto-added to `database_structure.json`.
+- Required properties are class-specific and enforced through the Structure JSON.
 - IDs and creation timestamps are immutable once created.

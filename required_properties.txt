@@ -4,7 +4,7 @@ EBSD:
 Electrical_measurement: 
 FIB_milling: ion_species, microscope
 Imaging: microscope
-Liftout: 
+Liftout: ion_species, microscope
 Micromechanical_testing: test_type
 Pillar_array: 
 Processing_Step: 

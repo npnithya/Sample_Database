@@ -1,0 +1,269 @@
+{
+    "Sample": {
+        "base": null,
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Processing_Step": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Wafer": {
+        "base": "Sample",
+        "required": [
+            "material"
+        ],
+        "custom": [
+            "substrate",
+            "film_thickness",
+            "deposition_temperature",
+            "deposition_date",
+            "note",
+            "deposition_time",
+            "layer_thickness",
+            "ALD_cycles",
+            "name",
+            "deposition_Ar_flow",
+            "deposition_cycles"
+        ],
+        "permitted_children": [
+            "Chip",
+            "SEM_stub",
+            "Annealing",
+            "XRay_analysis",
+            "Electrical_measurement",
+            "Micromechanical_testing",
+            "Swissmapper"
+        ]
+    },
+    "Chip": {
+        "base": "Sample",
+        "required": [],
+        "custom": [
+            "substrate",
+            "material",
+            "thickness",
+            "deposition_date",
+            "note",
+            "deposition_time",
+            "deposition_temperature",
+            "wafer_location",
+            "sputter_flow",
+            "sputter_current",
+            "deposition_pressure"
+        ],
+        "permitted_children": [
+            "SEM_stub",
+            "Annealing",
+            "Chip",
+            "Imaging",
+            "XRay_analysis",
+            "Electrical_measurement",
+            "Micromechanical_testing",
+            "Swissmapper"
+        ]
+    },
+    "SEM_stub": {
+        "base": "Sample",
+        "required": [
+            "stub_diameter"
+        ],
+        "custom": [
+            "note"
+        ],
+        "permitted_children": [
+            "Pillar_array",
+            "Tensile_bar",
+            "TEM_lamella",
+            "Imaging",
+            "XRay_analysis",
+            "Micromechanical_testing",
+            "Swissmapper",
+            "Liftout",
+            "EBSD",
+            "FIB_milling"
+        ]
+    },
+    "TEM_lamella": {
+        "base": "Sample",
+        "required": [
+            "grid_material"
+        ],
+        "custom": [
+            "grid_post",
+            "grid_ID"
+        ],
+        "permitted_children": [
+            "Liftout",
+            "Imaging",
+            "TKD",
+            "APT_tip",
+            "EBSD",
+            "Micromechanical_testing",
+            "FIB_milling"
+        ]
+    },
+    "Pillar_array": {
+        "base": "Sample",
+        "required": [],
+        "custom": [
+            "No_pillars"
+        ],
+        "permitted_children": [
+            "TEM_lamella",
+            "FIB_milling",
+            "Pillar_compression",
+            "Imaging",
+            "EBSD",
+            "Micromechanical_testing",
+            "Liftout"
+        ]
+    },
+    "Tensile_bar": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": [
+            "TEM_lamella",
+            "FIB_milling",
+            "Imaging",
+            "TKD",
+            "EBSD",
+            "Micromechanical_testing",
+            "Liftout"
+        ]
+    },
+    "APT_tip": {
+        "base": "Sample",
+        "required": [],
+        "custom": [],
+        "permitted_children": [
+            "FIB_milling",
+            "Imaging"
+        ]
+    },
+    "Annealing": {
+        "base": "Processing_Step",
+        "required": [
+            "temperature_C",
+            "duration"
+        ],
+        "custom": [
+            "note",
+            "annealing_date",
+            "annealing_atmosphere",
+            "ramp_rate"
+        ],
+        "permitted_children": [
+            "Chip",
+            "SEM_stub"
+        ]
+    },
+    "FIB_milling": {
+        "base": "Processing_Step",
+        "required": [
+            "ion_species",
+            "microscope"
+        ],
+        "custom": [
+            "milling_date",
+            "FIB_currents",
+            "note"
+        ],
+        "permitted_children": []
+    },
+    "Liftout": {
+        "base": "Processing_Step",
+        "required": [
+            "microscope",
+            "ion_species"
+        ],
+        "custom": [
+            "liftout_date",
+            "liftout_location",
+            "note"
+        ],
+        "permitted_children": [
+            "TEM_lamella",
+            "APT_tip"
+        ]
+    },
+    "Imaging": {
+        "base": "Processing_Step",
+        "required": [
+            "microscope"
+        ],
+        "custom": [
+            "note",
+            "imaging_date",
+            "imaging_mode",
+            "folder"
+        ],
+        "permitted_children": []
+    },
+    "XRay_analysis": {
+        "base": "Processing_Step",
+        "required": [
+            "mode"
+        ],
+        "custom": [
+            "measurement_date"
+        ],
+        "permitted_children": []
+    },
+    "TKD": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "EBSD": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "Micromechanical_testing": {
+        "base": "Processing_Step",
+        "required": [
+            "test_type"
+        ],
+        "custom": [
+            "testing_date",
+            "strain_rate",
+            "microscope",
+            "frame",
+            "tip"
+        ],
+        "permitted_children": []
+    },
+    "Electrical_measurement": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [
+            "software_version"
+        ],
+        "permitted_children": []
+    },
+    "Swissmapper": {
+        "base": "Processing_Step",
+        "required": [],
+        "custom": [],
+        "permitted_children": []
+    },
+    "DSC": {
+        "base": "Processing_Step",
+        "required": [
+            "max_temperature"
+        ],
+        "custom": [],
+        "permitted_children": [
+            "Imaging",
+            "Liftout",
+            "XRay_analysis"
+        ]
+    }
+}

@@ -1,0 +1,11 @@
+# Exclude all files and folders in databases/ except for example_tree.json
+databases/*
+!databases/example_tree.json
+
+# Cache file
+.db_cache.json
+
+# Python temporary files
+__pycache__/
+*.py[cod]
+*$py.class
