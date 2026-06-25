@@ -5,7 +5,11 @@ import threading
 
 # -------- GUI + Tree persistence utilities --------
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+import sys
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TREE_STORAGE_DIR = os.path.join(BASE_DIR, "databases")
 os.makedirs(TREE_STORAGE_DIR, exist_ok=True)
 
