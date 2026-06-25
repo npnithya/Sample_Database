@@ -1,7 +1,8 @@
 {
   "root": {
     "id": "SYSTEM",
-    "sample_system": "EXAMPLE_PUBLIC"
+    "sample_system": "EXAMPLE_PUBLIC",
+    "sort_mode": "none"
   },
   "nodes": [
     {

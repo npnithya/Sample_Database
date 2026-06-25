@@ -155,7 +155,9 @@
             "note",
             "annealing_date",
             "annealing_atmosphere",
-            "ramp_rate"
+            "ramp_rate",
+            "flow_rate",
+            "oven"
         ],
         "permitted_children": [
             "Chip",

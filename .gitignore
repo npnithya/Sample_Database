@@ -7,5 +7,6 @@ databases/*
 
 # Python temporary files
 __pycache__/
+scratch/
 *.py[cod]
 *$py.class

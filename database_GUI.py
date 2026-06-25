@@ -460,10 +460,11 @@ class SampleTreeGUI:
         file_menu = tk.Menu(menubar, tearoff=0)
         file_menu.add_command(label="New Tree", command=self.create_new_tree)
         file_menu.add_command(label="Load Tree", command=self.load_tree)
-        file_menu.add_command(label="Open All Trees", command=self.load_all_trees)
+        file_menu.add_command(label="Load Multiple Trees", command=self.load_multiple_trees)
         file_menu.add_separator()
         file_menu.add_command(label="Save Tree", command=self.save_tree)
         file_menu.add_command(label="Save, archive and close", command=self._save_archive_and_close)
+        file_menu.add_command(label="Close Selected Tree", command=self.close_selected_tree)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.on_closing)
         menubar.add_cascade(label="File", menu=file_menu)
@@ -541,6 +542,8 @@ class SampleTreeGUI:
         # 1. Quick Access Top Bar
         top_bar = ttk.Frame(main)
         top_bar.pack(fill="x", pady=(0, 2))
+        ttk.Button(top_bar, text="Collapse All", command=self.collapse_all_trees).pack(side="left", padx=2)
+        ttk.Button(top_bar, text="Expand All", command=self.expand_all_trees).pack(side="left", padx=2)
         ttk.Button(top_bar, text="Search", command=self.search_property).pack(side="left", padx=2)
         ttk.Button(top_bar, text="Save Tree", command=self.save_tree).pack(side="left", padx=2)
         ttk.Button(top_bar, text="Save, archive and close", command=self._save_archive_and_close).pack(side="left", padx=2)
@@ -1246,6 +1249,161 @@ class SampleTreeGUI:
         else:
             self.refresh_status(f"Loaded {len(loaded)} trees.")
 
+
+    def load_multiple_trees(self):
+        filenames = filedialog.askopenfilenames(
+            initialdir=TREE_STORAGE_DIR,
+            filetypes=[("JSON Files", "*.json")],
+            title="Load Multiple Trees")
+        if not filenames:
+            return
+
+        loaded = {}
+        failed = []
+        for idx, path in enumerate(filenames):
+            try:
+                tree = deserialize_tree(path)
+                system_node = tree.get_node(tree.root)
+                system_name = ""
+                sort_mode = "none"
+                if system_node is not None:
+                    system_name = system_node.data.get("Sample_System", "")
+                    sort_mode = system_node.data.get("sort_mode", "none")
+                key = f"{idx:04d}_{os.path.basename(path)}"
+                loaded[key] = {
+                    "tree": tree,
+                    "file": path,
+                    "label": f"{system_name}" if system_name else os.path.basename(path),
+                }
+                self.sort_state[key] = sort_mode
+            except Exception as e:
+                failed.append(f"{os.path.basename(path)}: {e}")
+
+        if not loaded:
+            messagebox.showerror("Error", "No trees could be loaded.")
+            return
+
+        self.display_mode = "multi"
+        self.tree_obj = None
+        self.current_file = None
+        self.multi_trees = loaded
+        self.sort_var.set("none")
+        self.populate_multi_treeview()
+        self.parent_label_var.set("-")
+        self.class_cb['values'] = []
+        self.class_var.set("")
+        self._hide_discover_button()
+        self.last_action_was_save_archive_close = False
+
+        if failed:
+            self.refresh_status(f"Loaded {len(loaded)} trees ({len(failed)} failed).")
+        else:
+            self.refresh_status(f"Loaded {len(loaded)} trees.")
+
+    def close_selected_tree(self):
+        selected = self.treeview.selection()
+        if not selected:
+            messagebox.showwarning("Close Tree", "No node selected. Please select a node from the tree you want to close.")
+            return
+
+        if self.display_mode == "multi":
+            iid = selected[0]
+            while True:
+                parent = self.treeview.parent(iid)
+                if not parent:
+                    break
+                iid = parent
+            
+            system_key = None
+            for key, top_iid in self.treeview_system_iids.items():
+                if top_iid == iid:
+                    system_key = key
+                    break
+            
+            if not system_key:
+                system_key = self.treeview_index.get(selected[0], {}).get("system_key")
+            
+            if not system_key or system_key not in self.multi_trees:
+                messagebox.showwarning("Close Tree", "Could not identify the tree to close.")
+                return
+            
+            info = self.multi_trees[system_key]
+            ans = messagebox.askyesnocancel("Close Tree", f"Save and archive '{info.get('label', system_key)}' before closing?")
+            if ans is None:
+                return
+            if ans:
+                try:
+                    tree = info["tree"]
+                    filepath = info["file"]
+                    sort_mode = self.sort_state.get(system_key, "none")
+                    serialize_tree(tree, filepath, sort_mode=sort_mode)
+                    
+                    archive_dir = os.path.join(os.path.dirname(filepath) if filepath else TREE_STORAGE_DIR, "archive")
+                    os.makedirs(archive_dir, exist_ok=True)
+                    ts = datetime.now().strftime("%y%m%d")
+                    base = os.path.basename(filepath)
+                    root, ext = os.path.splitext(base)
+                    out_name = f"{root}_{ts}{ext}" if ext else f"{root}_{ts}"
+                    out_path = os.path.join(archive_dir, out_name)
+                    serialize_tree(tree, out_path, sort_mode=sort_mode)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to save/archive tree: {e}")
+                    return
+
+            del self.multi_trees[system_key]
+            if system_key in self.sort_state:
+                del self.sort_state[system_key]
+            
+            if not self.multi_trees:
+                self.display_mode = "single"
+                self.treeview.delete(*self.treeview.get_children())
+            else:
+                self.populate_multi_treeview()
+            self.refresh_status("Closed tree.")
+
+        else:
+            if not self.tree_obj:
+                return
+            ans = messagebox.askyesnocancel("Close Tree", "Save and archive the current tree before closing?")
+            if ans is None:
+                return
+            if ans:
+                try:
+                    self.save_tree()
+                    filepath = self.current_file
+                    if filepath:
+                        archive_dir = os.path.join(os.path.dirname(filepath), "archive")
+                        os.makedirs(archive_dir, exist_ok=True)
+                        ts = datetime.now().strftime("%y%m%d")
+                        base = os.path.basename(filepath)
+                        root, ext = os.path.splitext(base)
+                        out_name = f"{root}_{ts}{ext}" if ext else f"{root}_{ts}"
+                        out_path = os.path.join(archive_dir, out_name)
+                        root_node = self.tree_obj.get_node(self.tree_obj.root)
+                        sort_mode = root_node.data.get("sort_mode", "none") if root_node else "none"
+                        serialize_tree(self.tree_obj, out_path, sort_mode=sort_mode)
+                except Exception as e:
+                    messagebox.showerror("Error", f"Failed to save/archive tree: {e}")
+                    return
+
+            self._clear_loaded_trees()
+            self.refresh_status("Closed tree.")
+
+    def collapse_all_trees(self):
+        def _collapse(item):
+            self.treeview.item(item, open=False)
+            for child in self.treeview.get_children(item):
+                _collapse(child)
+        for item in self.treeview.get_children():
+            _collapse(item)
+
+    def expand_all_trees(self):
+        def _expand(item):
+            self.treeview.item(item, open=True)
+            for child in self.treeview.get_children(item):
+                _expand(child)
+        for item in self.treeview.get_children():
+            _expand(item)
 
     def import_legacy_keys(self):
         import json
